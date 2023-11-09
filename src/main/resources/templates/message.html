@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="msg">
+        <style>
+            body {
+                font-family: 'Arial', sans-serif;
+                background-color: #f0f0f0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                margin: 0;
+            }
+
+            .chat-container {
+                background-color: #fff;
+                border-radius: 15px;
+                padding: 20px;
+                width: 300px;
+                box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+            }
+
+            .chat-message {
+                padding: 10px 15px;
+                margin-bottom: 10px;
+                border-radius: 20px;
+                max-width: 80%;
+                word-wrap: break-word;
+            }
+
+            .sender {
+                align-self: flex-end;
+                background-color: #9b59b6; /* 보라색 */
+                color: #fff;
+            }
+
+            .receiver {
+                align-self: flex-start;
+                background-color: #ecf0f1; /* 회색 */
+                color: #333;
+            }
+        </style>
+    <div class="chat-container">
+        <div class="chat-message sender">
+            안녕하세요! 어떻게 도와드릴까요?
+        </div>
+        <div class="chat-message receiver">
+            아이폰 메시지 디자인을 웹페이지에 적용하고 싶어요!
+        </div>
+        <div class="chat-message sender">
+            네, 원하시는 스타일로 만들어드리겠습니다.
+        </div>
+    </div>
+</html>
+
+

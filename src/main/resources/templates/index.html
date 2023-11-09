@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+	//전역변수
+	let questionList1 = [];
+	let questionList2 = [];
+
+	$(document).ready(function() {
+		//처음에 문제 불러오기
+		studyDramSub();
+
+		$('#sendMessageButton').on('click', function (){
+			let sentence = $('#messageInput').val();
+			console.log(sentence);
+			//문제 제출하면 문제 확인 (start_time을 활용해서 체크용 정답지를 가져오기
+			//seq 값 담아서 보내기
+			checkAnswer(sentence);
+			$('#messageInput').val('');//리셋해주기
+		});
+
+		$('#messageInput').on('keypress', function(e) {
+			if (e.which === 13) {  // 13은 엔터 키의 키 코드입니다.
+				let sentence = $(this).val();
+				console.log("입력된 값:", $(this).val());
+				//문제 제출하면 문제 확인
+				checkAnswer(sentence)
+				e.preventDefault();
+
+				//스크롤 내려가기
+				const chatContainer = $('#synMsg');
+				//chatContainer.scrollTop(chatContainer[0].scrollHeight);
+				console.log(chatContainer[0].scrollHeight)
+				chatContainer.scrollTop(chatContainer[0].scrollHeight+100);
+
+
+				$('#messageInput').val('');//리셋해주기
+			}
+		});
+
+	});
+
+	function studyDramSub(){
+		$.ajax({
+			url: '/studyDramSub',
+			type: 'post',
+			contentType: 'application/json',
+			data: JSON.stringify({
+				key1: 'value1'
+			}),
+			dataType: 'json',
+			success: function(data) {
+				console.log(data);
+
+				//지금 불러온 10문제 전역변수 담기 (출제될 때마다 변수가 하나씩 사라짐)
+				questionList1 = data.sub;
+
+				//정답 체크용
+				//questionList2 = data.sub;
+
+				//불러온 문제들 중에 하나 출력해서 문제내고 하나 지우기
+				nextQuestion(getRandomItemAndRemove(questionList1));
+			},
+			error: function(error) {
+				console.log("Error: ", error);
+			}
+		});
+	}
+
+	//정답 체크용 함수
+	function checkAnswer(sentence){
+
+		let elements = document.querySelectorAll('.chat-message.receiver');
+		let lastElement = elements[elements.length - 1]; // 맨 하단의 답변의 값을 가져오기
+		let seq = lastElement.getAttribute('data-seq');
+
+		$.ajax({
+			url: '/ajax/checkAnswer',
+			type: 'post',
+			contentType: 'application/json',
+			data: JSON.stringify({
+				 seq      : seq
+				,sentence : sentence
+			}),
+			dataType: 'json',
+			success: function(data) {
+
+				str = "";
+				str += "<div class=\"chat-message sender\">"+ sentence+ " </div>";
+
+				if(data.answerStatus === "incorrect"){
+					str += "<div class=\"chat-message receiver\">오답입니다.</div>";
+				}else if(data.answerStatus === "correct"){
+					str += "<div class=\"chat-message receiver\">정답입니다.</div>"
+				}else {
+					alert('꺼져 ㅅㅂ ');
+				}
+				$('#synMsg').append(str);
+
+				//다음문제 호출하기 & 배열에 값이 없다면 done
+				if(questionList1.length === 0){
+					str = "";
+					str += "<div class=\"chat-message receiver\">끝났습니다.</div>";
+					$('#synMsg').append(str);
+				}else{
+					nextQuestion(getRandomItemAndRemove(questionList1));
+				}
+
+
+
+
+			},
+			error: function(error) {
+				console.log("Error: ", error);
+			}
+		});
+
+	}
+
+	//불러온 배열들 중에 출력된 애들은 하나씩 제거
+	function getRandomItemAndRemove(arr) {
+		let randomIndex = Math.floor(Math.random() * arr.length);
+		let selectedItem = "";
+
+		if (arr.length > 0) {
+			console.log("배열에는 아직 항목이 남아있습니다.");
+			selectedItem = arr[randomIndex];
+			arr.splice(randomIndex, 1);  // 랜덤한 위치의 항목을 제거
+		} else {
+			console.log("배열이 비어있습니다.");
+			selectedItem = "11"; //11이 출력되면 배열이 없어용
+		}
+
+		return selectedItem;
+	}
+
+	//문제 제출용 함수
+	function nextQuestion(problem){
+		let str ="";
+		console.log('nextQuestion >>> ', problem)
+
+		const words = problem.e_text_sub.split(" ");
+
+		shuffleArray(words);
+		const randomizedSentence = words.join(" ");
+
+		//내용 삽입
+		str += '<div class="chat-message receiver" id= "answerSub" data-seq ='+ problem.seq+'>문장을 뜻에 맞게 나열해주세요.<br/><br/>';
+		str +=  		problem.k_text_sub +'<br/>';
+		str += 			randomizedSentence ;
+		str +=	'</div>';
+
+
+		$('#synMsg').append(str);
+
+	}
+
+	//문장섞기
+	function shuffleArray(array) {
+		for (let i = array.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[array[i], array[j]] = [array[j], array[i]];  // ES6 array element swapping
+		}
+	}
+
+
+</script>
+
+
+<html>
+	<head>
+		<title>모던패밀리 광인</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" th:href="@{/css/main.css}" />
+		<noscript><link rel="stylesheet" th:href="@{/css/noscript.css}" /></noscript>
+	</head>
+	<body class="is-preload">
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+				<!-- Header -->
+				<header id="header" class="alt">
+					<span class="logo"><img th:src="@{/images/logo.svg}" alt="" /></span>
+						<h1>귀찮아</h1>
+						<p>We are going to travel to California.<br />
+						<!--built by <a href="https://twitter.com/ajlkn">@ajlkn</a> for <a href="https://html5up.net">HTML5 UP</a>.</p>-->
+					</header>
+
+				<!-- Nav -->
+					<nav id="nav">
+						<ul>
+							<li><a href="#intro" class="active">Introduction</a></li>
+							<li><a href="#first">First Section</a></li>
+							<li><a href="#second">Second Section</a></li>
+							<li><a href="#cta">Get Started</a></li>
+						</ul>
+					</nav>
+
+				<!-- Main -->
+					<div id="main">
+						<!-- Introduction -->
+							<section id="intro" class="main">
+								<div class="spotlight">
+									<div class="content">
+										<header class="major">
+											<h2>모팸 완전 정복</h2>
+											<!--<h2 th:text="${message}"></h2>-->
+											<!--<h2 th:text="${sub[0].k_text_sub}"></h2>-->
+										</header>
+										<p>모팸을 너무 좋아해서 어쩔 수 없이 만들었슈</p>
+
+										<ul class="actions">
+											<li><a href="generic.html" class="button">Learn More</a></li>
+										</ul>
+									</div>
+									<span class="image"><img th:src="@{/images/pic01.jpg}" alt="" /></span>
+								</div>
+							</section>
+
+						<!-- First Section -->
+							<section id="first" class="main special" style="height: 1000px;">
+								<h2>안녕하세요! 모던 패밀리 시즌 1-1 공부하겠습니다.</h2>
+								<div class="msgDiv">
+									<div class="chat-container" id="addMsg">
+										<div id="synMsg">
+											<!--메세지 내용이 계속 추가됨-->
+											<!--<div class="chat-message receiver">dfsdf</div>-->
+											<!--<div class="chat-message sender">sd111</div>-->
+										 </div>
+                                    	<div class="input-container">
+                                        	<input type="text" id="messageInput" placeholder="메시지를 입력하세요...">
+                                        	<button id="sendMessageButton">전송</button>
+                                    	</div>
+									</div>
+                                </div>
+                            <!--<div th:insert="~{message :: msg}"></div>-->
+							</section>
+
+						<!-- Second Section
+							<section id="second" class="main special">
+								<header class="major">
+									<h2>Ipsum consequat</h2>
+									<p>Donec imperdiet consequat consequat. Suspendisse feugiat congue<br />
+									posuere. Nulla massa urna, fermentum eget quam aliquet.</p>
+								</header>
+								<ul class="statistics">
+									<li class="style1">
+										<span class="icon solid fa-code-branch"></span>
+										<strong>5,120</strong> Etiam
+									</li>
+									<li class="style2">
+										<span class="icon fa-folder-open"></span>
+										<strong>8,192</strong> Magna
+									</li>
+									<li class="style3">
+										<span class="icon solid fa-signal"></span>
+										<strong>2,048</strong> Tempus
+									</li>
+									<li class="style4">
+										<span class="icon solid fa-laptop"></span>
+										<strong>4,096</strong> Aliquam
+									</li>
+									<li class="style5">
+										<span class="icon fa-gem"></span>
+										<strong>1,024</strong> Nullam
+									</li>
+								</ul>
+								<p class="content">Nam elementum nisl et mi a commodo porttitor. Morbi sit amet nisl eu arcu faucibus hendrerit vel a risus. Nam a orci mi, elementum ac arcu sit amet, fermentum pellentesque et purus. Integer maximus varius lorem, sed convallis diam accumsan sed. Etiam porttitor placerat sapien, sed eleifend a enim pulvinar faucibus semper quis ut arcu. Ut non nisl a mollis est efficitur vestibulum. Integer eget purus nec nulla mattis et accumsan ut magna libero. Morbi auctor iaculis porttitor. Sed ut magna ac risus et hendrerit scelerisque. Praesent eleifend lacus in lectus aliquam porta. Cras eu ornare dui curabitur lacinia.</p>
+								<footer class="major">
+									<ul class="actions special">
+										<li><a href="generic.html" class="button">Learn More</a></li>
+									</ul>
+								</footer>
+							</section> -->
+
+						<!-- Get Started -->
+							<section id="cta" class="main special">
+								<header class="major">
+									<h2>Congue imperdiet</h2>
+									<p>Donec imperdiet consequat consequat. Suspendisse feugiat congue<br />
+									posuere. Nulla massa urna, fermentum eget quam aliquet.</p>
+								</header>
+								<footer class="major">
+									<ul class="actions special">
+										<li><a href="generic.html" class="button primary">Get Started</a></li>
+										<li><a href="generic.html" class="button">Learn More</a></li>
+									</ul>
+								</footer>
+							</section>
+
+					</div>
+
+				<!-- Footer -->
+					<footer id="footer">
+						<section>
+							<h2>Aliquam sed mauris</h2>
+							<p>Sed lorem ipsum dolor sit amet et nullam consequat feugiat consequat magna adipiscing tempus etiam dolore veroeros. eget dapibus mauris. Cras aliquet, nisl ut viverra sollicitudin, ligula erat egestas velit, vitae tincidunt odio.</p>
+							<ul class="actions">
+								<li><a href="generic.html" class="button">Learn More</a></li>
+							</ul>
+						</section>
+						<section>
+							<h2>Etiam feugiat</h2>
+							<dl class="alt">
+								<dt>Address</dt>
+								<dd>1234 Somewhere Road &bull; Nashville, TN 00000 &bull; USA</dd>
+								<dt>Phone</dt>
+								<dd>(000) 000-0000 x 0000</dd>
+								<dt>Email</dt>
+								<dd><a href="#">information@untitled.tld</a></dd>
+							</dl>
+							<ul class="icons">
+								<li><a href="#" class="icon brands fa-twitter alt"><span class="label">Twitter</span></a></li>
+								<li><a href="#" class="icon brands fa-facebook-f alt"><span class="label">Facebook</span></a></li>
+								<li><a href="#" class="icon brands fa-instagram alt"><span class="label">Instagram</span></a></li>
+								<li><a href="#" class="icon brands fa-github alt"><span class="label">GitHub</span></a></li>
+								<li><a href="#" class="icon brands fa-dribbble alt"><span class="label">Dribbble</span></a></li>
+							</ul>
+						</section>
+						<p class="copyright">&copy; Untitled. Design: <a href="https://html5up.net">HTML5 UP</a>.</p>
+					</footer>
+
+			</div>
+
+		<!-- Scripts -->
+			<script th:src="@{/js/jquery.min.js}"></script>
+			<script th:src="@{/js/jquery.scrollex.min.js}"></script>
+			<script th:src="@{/js/jquery.scrolly.min.js}"></script>
+			<script th:src="@{/js/browser.min.js}"></script>
+			<script th:src="@{/js/breakpoints.min.js}"></script>
+			<script th:src="@{/js/util.js}"></script>
+			<script th:src="@{/js/main.js}"></script>
+	</body>
+</html>
+
