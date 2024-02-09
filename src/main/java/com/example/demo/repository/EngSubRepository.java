@@ -28,7 +28,7 @@ public interface EngSubRepository extends JpaRepository<EngSub, Long> {
             "and e.chapter = k.chapter " +
             "where e.seq = :seq " + // 공백 추가
             "group by k.start_time, k.text_sub, e.text_sub", nativeQuery = true) // 모든 컬럼 추가
-    Map<String,Object> findCustomDataBySeq(@Param("seq") String seq);
+    Map<String,Object> findCustomDataBySeq(@Param("seq") String seq); //주석 테스트
 
 
 }
